@@ -797,6 +797,81 @@ async def important_channels(interaction:discord.Interaction):
     except Exception as e:
         print(e)
 
+@client.tree.command(name="update_attendance", description="update attendance for all users")
+@commands.cooldown(1, 5, commands.BucketType.default)
+async def update_attendance(interaction: discord.Interaction, attendees: str):
+    try:
+        
+        allowed_role_list = ["SAT"]
+        user_role_list = [role.name for role in interaction.user.roles]
+
+        if any(role in allowed_role_list for role in user_role_list):
+            SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
+            attended_users = attendees.split(",")
+
+            for id, record in SERVICE_RECORD.items():
+                if "attendance" not in record:
+                    record["attendance"] = []
+                
+                if record["name"] in attended_users and record["attendance"]:
+                    record["attendance"].append(1)  # Attended
+                elif record["name"] in attended_users:
+                    record["attendance"] = [1]  # First attendance
+                elif record["name"] not in attended_users and record["attendance"]:
+                    record["attendance"].append(0)  # Did not attend, previously attended
+                elif record["name"] not in attended_users:
+                    record["attendance"] = [0] # Did not attend
+
+        else:
+            await interaction.response.send_message("You dont have the required roles!")
+
+
+        with open(SERVICE_RECORD_FILE, 'w') as f:
+                json.dump(SERVICE_RECORD, f)
+        
+        await interaction.response.send_message(f"attendance updated")
+
+    except Exception as e:
+        print(e)
+
+
+@client.tree.command(name="view_attendance", description="view attendance for a user")
+@commands.cooldown(1, 5, commands.BucketType.default)
+async def view_attendance(interaction: discord.Interaction, user: str):
+    try:
+        
+        allowed_role_list = ["Junior NCO", "Senior NCO", "Officer"]
+        user_role_list = [role.name for role in interaction.user.roles]
+
+        if any(role in allowed_role_list for role in user_role_list):
+            SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
+            
+            # Check if user exists in SERVICE_RECORD
+            user_record = None
+            for record_key, record_value in SERVICE_RECORD.items():
+                if record_value["name"] == user:
+                    user_record = record_value
+                    break
+            
+            if user_record:
+                overall_ops = len(user_record["attendance"])
+                overall_attended = sum(user_record["attendance"])
+
+                if overall_ops > 0: 
+                    attendance_percentage = (overall_attended / overall_ops) * 100
+                else:
+                    attendance_percentage = 0
+
+                await interaction.response.send_message(f"Attendance for {user}: {attendance_percentage:.2f}%")
+            else:
+                await interaction.response.send_message(f"No attendance record found for {user}.")
+        
+        else:
+            await interaction.response.send_message("You don't have the required roles!")
+
+
+    except Exception as e:
+        print(e)
         
 		### VIEW ORBAT COMMAND ###
 
