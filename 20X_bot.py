@@ -1,12 +1,12 @@
 import discord
 from discord.ext import commands
 import json
-from Functions import load_data, save_data, create_embed, get_member_id, send_email_with_json, run_email_scheduler
-from Functions import not_reacted_list, post_rsvp_list, update_rsvp_list, generate_unix_timestamp_and_relative
+from Functions import *
 import asyncio
 import threading
 import time
 from secret import BOT_KEY, SERVER_ID_20TH
+import os
 
 CALENDAR_CHANNEL_ID = 843347366345441280 ###
 ATTENDING_REACTION = '✅'
@@ -22,14 +22,32 @@ intents.messages = True
 intents.guilds = True  # Add this line to enable the messages intent
 
 client = commands.Bot(command_prefix='!', intents=intents)
+# guild = client.get_guild(SERVER_ID_20TH)
+
+# if guild:
+#     members = guild.members  # Access cached members directly
+#     roles = guild.roles      # Access cached roles directly
+#     print(f"Guild '{guild.name}' has {len(members)} members and {len(roles)} roles.")
+# else:
+#     print(f"Bot is not connected to the server with ID {SERVER_ID_20TH}")
+
+
 #tree = app_commands.CommandTree(client)
 
-SERVICE_RECORD_FILE = 'service_record_data.json' #add 20X_BOT/ to start of string when on sevrer 
+is_server = os.path.exists('20X_BOT/service_record_data.json')
+
+if is_server:
+    BASE_PATH = '20X_BOT/'  # Path for the server
+else:
+    BASE_PATH = ''  # Path for local machine
+
+SERVICE_RECORD_FILE = os.path.join(BASE_PATH, 'service_record_data.json')
 SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
 
-ALL_EVENTS_FILE = 'all_events.json'
+ALL_EVENTS_FILE = os.path.join(BASE_PATH, 'all_events.json')
 ALL_EVENTS = load_data(ALL_EVENTS_FILE)
 
+ORBAT_IMAGE_PATH = os.path.join(BASE_PATH, '20th_ORBAT.jpg')
 ORBAT_IMAGE_PATH = '20th_ORBAT.jpg'
 
             ###BACKUP TO EMAIL EVERY 3 DAYS###
@@ -46,14 +64,15 @@ async def on_ready():
     asyncio.create_task(event_auto_reminder())
 
 async def fetch_guild_and_members():
-    global guild, members, roles
-    guild = client.get_guild(SERVER_ID_20TH)
-    if guild:
-        members = guild.members
-        roles = guild.roles
+    global GUILD, GUILD_MEMBERS, GUILD_ROLES
+    GUILD = client.get_guild(SERVER_ID_20TH)
+    if GUILD:
+        GUILD_MEMBERS = GUILD.members
+        GUILD_ROLES = GUILD.roles
     else:
         print(f"Bot is not connected to the server with ID {SERVER_ID_20TH}")  # Add this line
     print("time")
+
                 
                 ### Event RSVP Features ###
 
@@ -70,7 +89,8 @@ async def create_event(interaction: discord.Interaction, event_name: str, event_
         if any(role in allowed_role_list for role in user_role_list):
             # Create the Embed and send it into the channel
             event_discord_timestamp, relative_timestamp, unix_timestamp = generate_unix_timestamp_and_relative(event_date, event_time)
-            embed = create_embed(f"New Event Created: {event_name}", f"{event_description}", f"{event_discord_timestamp}\nEvent starts {relative_timestamp}")
+
+            embed = create_embed(f"New Event Created: {event_name}", f"{event_description}", f"\nServer start: <t:{unix_timestamp}>\nBattle-Prep begins: <t:{unix_timestamp + 900}>\nStep Off: <t:{unix_timestamp + 1800}>\n\n\nEvent Begins {relative_timestamp}")
             
             await interaction.followup.send(embed=embed)
             event_message = await interaction.original_response()
@@ -144,7 +164,7 @@ async def generate_event_rsvp_list(interaction: discord.Interaction, event_name:
         message_id = int(ALL_EVENTS[event_name]["event message id"])
         channel_id = int(ALL_EVENTS[event_name]["event channel id"])
 
-        channel = guild.get_channel(channel_id)
+        channel = GUILD.get_channel(channel_id)
         message = await channel.fetch_message(message_id)
 
         # Updated allowed_role_list to include "Phase 2 Recruit"
@@ -156,7 +176,7 @@ async def generate_event_rsvp_list(interaction: discord.Interaction, event_name:
         all_users = set()
         trainee_riflemen = set()  # Set to store Phase 2 Recruits who are attending
 
-        for user in members:
+        for user in GUILD_MEMBERS:
             if any(role.name in allowed_role_list for role in user.roles):
                 all_users.add(user)
 
@@ -289,7 +309,7 @@ async def on_member_join(member):
 async def add_recruit(interaction: discord.Interaction, user: str, platoon: str, section: str = None, reserves: str = "no"):
     
     try:
-        welcome_channel = guild.get_channel(RECRUIT_WELCOME_CHANNEL)
+        welcome_channel = GUILD.get_channel(RECRUIT_WELCOME_CHANNEL)
         platoon_str = ""
         section_str = ""
         response_message = ""
@@ -301,14 +321,14 @@ async def add_recruit(interaction: discord.Interaction, user: str, platoon: str,
         if interaction.channel.id in allowed_channels.values():
 
             if any(role in allowed_role_list for role in user_role_list):
-                for member in members:
+                for member in GUILD_MEMBERS:
                     if member.name == user:
                         if reserves.lower() == "no":
                             platoon_str = f"{platoon} Platoon"
                             section_str = f"{section} Section"
-                            platoon_role = discord.utils.get(roles, name=platoon_str)
-                            section_role = discord.utils.get(roles, name=section_str)
-                            recruit_role = discord.utils.get(roles, name="Phase 1 Recruit")
+                            platoon_role = discord.utils.get(GUILD_ROLES, name=platoon_str)
+                            section_role = discord.utils.get(GUILD_ROLES, name=section_str)
+                            recruit_role = discord.utils.get(GUILD_ROLES, name="Phase 1 Recruit")
                             if platoon_role and section_role:
                                 await member.add_roles(platoon_role, section_role, recruit_role)
                                 response_message = f"Added roles {platoon_role.name} and {section_role.name} to {user}."
@@ -317,9 +337,9 @@ async def add_recruit(interaction: discord.Interaction, user: str, platoon: str,
                                 response_message = "One or more roles not found."
                         elif reserves.lower() == "yes":
                             platoon_str = f"{platoon} Platoon"
-                            platoon_role = discord.utils.get(roles, name=platoon_str)
+                            platoon_role = discord.utils.get(GUILD_ROLES, name=platoon_str)
                             role_str = "Reserves"
-                            role = discord.utils.get(roles, name=role_str)
+                            role = discord.utils.get(GUILD_ROLES, name=role_str)
                             if role:
                                 await member.add_roles(role, platoon_role)
                                 response_message = f"Added role {role.name} to {user}."
@@ -349,10 +369,10 @@ async def add_recruit(interaction: discord.Interaction, user: str, platoon: str,
     try:
         allowed_role_list = ["RTT", "SAT", "Officer"]
         user_role_list = [role.name for role in interaction.user.roles]
-        welcome_channel = guild.get_channel(RECRUIT_WELCOME_CHANNEL)
+        welcome_channel = GUILD.get_channel(RECRUIT_WELCOME_CHANNEL)
 
 
-        member = discord.utils.get(members, name=user)
+        member = discord.utils.get(GUILD_MEMBERS, name=user)
         member_id = member.id
 
         if any(role in allowed_role_list for role in user_role_list):
@@ -378,8 +398,8 @@ async def add_recruit(interaction: discord.Interaction, user: str, platoon: str,
                 await member.remove_roles(*roles)
 
                 platoon_str = f"{platoon} Platoon"
-                platoon_role = discord.utils.get(roles, name=platoon_str)
-                rank_role = discord.utils.get(roles, name="Phase 2 Trainee Rifleman")
+                platoon_role = discord.utils.get(GUILD_ROLES, name=platoon_str)
+                rank_role = discord.utils.get(GUILD_ROLES, name="Phase 2 Trainee Rifleman")
                 await member.add_roles(platoon_role, rank_role)
                 await interaction.response.send_message(f"Service record for {user} created! {platoon_str} and {rank_role} roles assigned!")
                 await welcome_channel.send(f"Congratulations to <@{member.id}> for completing the Phase 1 section of their CIC, Well done!")
@@ -431,13 +451,13 @@ async def add_service_record(interaction:discord.Interaction, user: str, rank: s
         allowed_role_list = ["PAT", "SAT"]
         user_role_list = [role.name for role in interaction.user.roles]
         
-        allowed_channels = {"G1 Personnel Admin Channel": 1292418540544069652, "Bot Test": 1246848431092138075}
+        allowed_channels = {"G1 Personnel Admin Channel": 701267972475584525, "Bot Test": 1246848431092138075}
         
         if interaction.channel.id in allowed_channels.values():
 
             if any(role in allowed_role_list for role in user_role_list):
 
-                member = discord.utils.get(members, name=user)
+                member = discord.utils.get(GUILD_MEMBERS, name=user)
                 member_id = member.id
 
 
@@ -518,7 +538,7 @@ async def get_service_record(interaction: discord.Interaction, user: str):
             if any(role in allowed_role_list for role in user_role_list):
                 SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
                 # Get member by name
-                member = discord.utils.get(members, name=user)
+                member = discord.utils.get(GUILD_MEMBERS, name=user)
             
                 if member is None:
                     await interaction.response.send_message(f"User {user} not found.", ephemeral=True)
@@ -579,15 +599,14 @@ async def update_service_record(interaction:discord.Interaction, user: str, rank
         allowed_role_list = ["PAT", "SAT"]
         user_role_list = [role.name for role in interaction.user.roles]
         
-        allowed_channels = {"G1 Personnel Admin Channel": 701267972475584525, 
-                            "Bot Test": 1246848431092138075}
+        allowed_channels = {"G1 Personnel Admin Channel": 701267972475584525, "Bot Test": 1246848431092138075}
         
         if interaction.channel.id in allowed_channels.values():
 
             if any(role in allowed_role_list for role in user_role_list):
                 SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
 
-                member = discord.utils.get(members, name=user)
+                member = discord.utils.get(GUILD_MEMBERS, name=user)
                 if member is None:
                     await interaction.response.send_message("User not found in this server.", ephemeral=True)
                     return
