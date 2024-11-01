@@ -451,7 +451,9 @@ async def add_service_record(interaction:discord.Interaction, user: str, rank: s
         allowed_role_list = ["PAT", "SAT"]
         user_role_list = [role.name for role in interaction.user.roles]
         
-        allowed_channels = {"G1 Personnel Admin Channel": 701267972475584525, "Bot Test": 1246848431092138075}
+        allowed_channels = {"G1 Personnel Admin Channel": 701267972475584525, 
+                            "Bot Test": 1246848431092138075, 
+                            "Platoon Channel": 680803082644226172}
         
         if interaction.channel.id in allowed_channels.values():
 
@@ -473,6 +475,8 @@ async def add_service_record(interaction:discord.Interaction, user: str, rank: s
                     SERVICE_RECORD[member_id]["zap number"] = zap_number
                     SERVICE_RECORD[member_id]["application date"] = application_date
                     SERVICE_RECORD[member_id]["verified forces"] = verified_forces
+
+                    SERVICE_RECORD[member_id]["attendance"] = []
 
                     if verified_forces == None:
                         SERVICE_RECORD[member_id]["verified forces"] = "none"
@@ -508,6 +512,8 @@ async def add_service_record(interaction:discord.Interaction, user: str, rank: s
                     else:
                         assignment_history = assignment_history.split(",")
                         SERVICE_RECORD[member_id]["assignment history"] = assignment_history
+
+                    
 
 
 
