@@ -6,18 +6,20 @@ from Functions import not_reacted_list, post_rsvp_list, update_rsvp_list, genera
 import asyncio
 import threading
 import time
+from secret import BOT_KEY, SERVER_ID_20TH
 
-SERVER_ID = 142673698682306560 ###
 CALENDAR_CHANNEL_ID = 843347366345441280 ###
 ATTENDING_REACTION = '✅'
 NOT_ATTENDING_REACTION = '❌'
+MAYBE_ATTENDING_REACTION = '❓'
 RECRUIT_WELCOME_CHANNEL = 680803082644226172
 WELCOME_CHANNEL_ID = 851874728394489926
 
 intents = discord.Intents.default()
 intents.reactions = True
 intents.members = True
-intents.messages = True  # Add this line to enable the messages intent
+intents.messages = True
+intents.guilds = True  # Add this line to enable the messages intent
 
 client = commands.Bot(command_prefix='!', intents=intents)
 #tree = app_commands.CommandTree(client)
@@ -44,16 +46,14 @@ async def on_ready():
     asyncio.create_task(event_auto_reminder())
 
 async def fetch_guild_and_members():
-    global GUILD, GUILD_MEMBERS, GUILD_ROLES
-    while True:
-        GUILD = client.get_guild(SERVER_ID)
-        if GUILD:
-            GUILD_MEMBERS = GUILD.members
-            GUILD_ROLES = GUILD.roles
-        else:
-            print(f"Bot is not connected to the server with ID {SERVER_ID}")  # Add this line
-        time.sleep(60*60*24)
-
+    global guild, members, roles
+    guild = client.get_guild(SERVER_ID_20TH)
+    if guild:
+        members = guild.members
+        roles = guild.roles
+    else:
+        print(f"Bot is not connected to the server with ID {SERVER_ID_20TH}")  # Add this line
+    print("time")
                 
                 ### Event RSVP Features ###
 
@@ -71,12 +71,16 @@ async def create_event(interaction: discord.Interaction, event_name: str, event_
             # Create the Embed and send it into the channel
             event_discord_timestamp, relative_timestamp, unix_timestamp = generate_unix_timestamp_and_relative(event_date, event_time)
             embed = create_embed(f"New Event Created: {event_name}", f"{event_description}", f"{event_discord_timestamp}\nEvent starts {relative_timestamp}")
+            
             await interaction.followup.send(embed=embed)
             event_message = await interaction.original_response()
+
             await event_message.add_reaction(ATTENDING_REACTION)
             await event_message.add_reaction(NOT_ATTENDING_REACTION)
+            await event_message.add_reaction(MAYBE_ATTENDING_REACTION)
+
             channel_id = interaction.channel_id
-            await interaction.followup.send("<@&680795785423880248> <@&680795766125887596> <@&680795741417242804> <@&680795653345116183> <@680795516228993025> Please RSVP above")
+            await interaction.followup.send("<@&680795785423880248> <@&680795766125887596> <@&680795741417242804> <@&680795653345116183> <@&680795516228993025> Please RSVP above")
             # Initialise entry into ALL_EVENTS dict for this event with message id as the key
             event_message_id = event_message.id
             ALL_EVENTS[event_name] = {}
@@ -94,6 +98,9 @@ async def create_event(interaction: discord.Interaction, event_name: str, event_
 
             with open(ALL_EVENTS_FILE, 'w') as f:
                 json.dump(ALL_EVENTS, f)
+        else:
+            await interaction.response.send_message("You dont have the required roles to create events!")
+
     except Exception as e:
         print(e)
         try:
@@ -112,8 +119,13 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 
             if str(payload.emoji) == ATTENDING_REACTION:
                 await message.remove_reaction(NOT_ATTENDING_REACTION, member)
+                await message.remove_reaction(MAYBE_ATTENDING_REACTION, member)
             elif str(payload.emoji) == NOT_ATTENDING_REACTION:
                 await message.remove_reaction(ATTENDING_REACTION, member)
+                await message.remove_reaction(MAYBE_ATTENDING_REACTION, member)
+            elif str(payload.emoji) == MAYBE_ATTENDING_REACTION:
+                await message.remove_reaction(ATTENDING_REACTION, member)
+                await message.remove_reaction(NOT_ATTENDING_REACTION, member)
 
 
 # Generate RSVP list function
@@ -132,7 +144,7 @@ async def generate_event_rsvp_list(interaction: discord.Interaction, event_name:
         message_id = int(ALL_EVENTS[event_name]["event message id"])
         channel_id = int(ALL_EVENTS[event_name]["event channel id"])
 
-        channel = GUILD.get_channel(channel_id)
+        channel = guild.get_channel(channel_id)
         message = await channel.fetch_message(message_id)
 
         # Updated allowed_role_list to include "Phase 2 Recruit"
@@ -140,10 +152,11 @@ async def generate_event_rsvp_list(interaction: discord.Interaction, event_name:
         
         attending_users = set()
         not_attending_users = set()
+        maybe_attending_users = set()
         all_users = set()
         trainee_riflemen = set()  # Set to store Phase 2 Recruits who are attending
 
-        for user in GUILD_MEMBERS:
+        for user in members:
             if any(role.name in allowed_role_list for role in user.roles):
                 all_users.add(user)
 
@@ -153,8 +166,10 @@ async def generate_event_rsvp_list(interaction: discord.Interaction, event_name:
                 attending_users = set([user async for user in reaction.users() if user in all_users])
             elif reaction.emoji == NOT_ATTENDING_REACTION:
                 not_attending_users = set([user async for user in reaction.users() if user in all_users])
+            elif reaction.emoji == MAYBE_ATTENDING_REACTION:
+                maybe_attending_users = set([user async for user in reaction.users() if user in all_users])
         
-        not_reacted_users = all_users - (attending_users | not_attending_users)
+        not_reacted_users = all_users - (attending_users | not_attending_users | maybe_attending_users)
 
         # Create an embed
         embed = discord.Embed(title=f"RSVP List for {event_name}", color=discord.Color.blue())
@@ -183,6 +198,10 @@ async def generate_event_rsvp_list(interaction: discord.Interaction, event_name:
         # Add field for Phase 2 Recruits
         if trainee_riflemen:
             embed.add_field(name="Trainee Riflemen", value="\n".join(trainee_riflemen), inline=False)
+        
+        maybe_attending_nicks = [user.nick if user.nick else user.name for user in maybe_attending_users]
+        if maybe_attending_nicks:
+            embed.add_field(name="Maybe", value="\n".join(maybe_attending_nicks), inline=False)
 
         # Add field for not attending members
         not_attending_nicks = [user.nick if user.nick else user.name for user in not_attending_users]
@@ -216,7 +235,7 @@ async def list_events(interaction: discord.Interaction):
                 channel_id = ALL_EVENTS[event_name]["event channel id"]
                 message_id = ALL_EVENTS[event_name]["event message id"]
 
-                full_string = f"{event_name}: {datetime} starts {relative_datetime}: RSVP here - https://discord.com/channels/{SERVER_ID}/{channel_id}/{message_id}"
+                full_string = f"{event_name}: {datetime} starts {relative_datetime}: RSVP here - https://discord.com/channels/{SERVER_ID_20TH}/{channel_id}/{message_id}"
                 all_events.append(full_string)
 
         embed = create_embed("All upcoming events", "List of all events")
@@ -229,10 +248,6 @@ async def list_events(interaction: discord.Interaction):
 async def event_auto_reminder():
     print("Starting event_auto_reminder task.")
     await client.wait_until_ready()
-    channel = client.get_channel(CALENDAR_CHANNEL_ID)
-    if channel is None:
-        print(f"Channel with ID {CALENDAR_CHANNEL_ID} not found.")
-        return
 
     while True:
         try:
@@ -242,9 +257,10 @@ async def event_auto_reminder():
                 event_relative_timestamp = ALL_EVENTS[event_name]["relative timestamp"]
                 channel_id = ALL_EVENTS[event_name]["event channel id"]
                 message_id = ALL_EVENTS[event_name]["event message id"]
+                channel = client.get_channel(channel_id)
 
                 if event_timestamp - 21600 < current_timestamp < event_timestamp - 18000:
-                    await channel.send(f"@everyone REMINDER: Event {event_name} tonight starting {event_relative_timestamp}\n- Make sure your modpack is up to date\n- if you haven't already RSVP here: https://discord.com/channels/{SERVER_ID}/{channel_id}/{message_id}\nThanks :).")
+                    await channel.send(f"@everyone REMINDER: Event {event_name} tonight starting {event_relative_timestamp}\n- Make sure your modpack is up to date\n- if you haven't already RSVP here: https://discord.com/channels/{SERVER_ID_20TH}/{channel_id}/{message_id}\nThanks :).")
 
                 else:
                     continue
@@ -259,9 +275,10 @@ async def event_auto_reminder():
 
 @client.event
 async def on_member_join(member):
+    time.sleep(30)
     try:
         channel = client.get_channel(WELCOME_CHANNEL_ID)
-        await channel.send(f"Welcome to the 20th ABCT MilSim discord {member.mention}.\nIf you are interested in joining as a member then please go to <#680801066845208652> and <#680800998436110376> for information about the unit and how to join.\nIf you prefer to speak with a recruiter then just tag <@&680795063684694063> in <#803312868106960997> and someone will respond as soon as they are available.\nFor representatives of other clans/units, please speak with <@140372016476848128> for any further assistance.\n\n Thanks!")
+        await channel.send(f"Welcome to the 20th ABCT MilSim discord {member.mention}.\nIf you are interested in joining as a member then please go to <#1292493814858252299> for information about the unit and how to join.\nIf you prefer to speak with a recruiter then just create a thread there, tag <@&680795063684694063> and someone will respond as soon as they are available.\nFor representatives of other clans/units, please speak with <@140372016476848128> for any further assistance.\n\n Thanks!")
     except Exception as e:
         await channel.send(f"ERROR WITH NEW USER JOIN HANDLING FEATURE: {e}")
 
@@ -269,10 +286,10 @@ async def on_member_join(member):
 @client.tree.command(name="add_recruit", 
               description="Assigns a user with platoon and section roles\nif reserves = yes leave platoon and section empty")
 @commands.cooldown(1, 5, commands.BucketType.default)
-async def add_recruit(interaction: discord.Interaction, user: str, platoon: str = None, section: str = None, reserves: str = "no"):
+async def add_recruit(interaction: discord.Interaction, user: str, platoon: str, section: str = None, reserves: str = "no"):
     
     try:
-        welcome_channel = GUILD.get_channel(RECRUIT_WELCOME_CHANNEL)
+        welcome_channel = guild.get_channel(RECRUIT_WELCOME_CHANNEL)
         platoon_str = ""
         section_str = ""
         response_message = ""
@@ -280,18 +297,18 @@ async def add_recruit(interaction: discord.Interaction, user: str, platoon: str 
         allowed_role_list = ["RRT", "SAT"]
         user_role_list = [role.name for role in interaction.user.roles]
         
-        allowed_channels = {"G1 Personnel Admin Channel": 701267972475584525}
+        allowed_channels = {"G1 Personnel Admin Channel": 701267972475584525, "Bot Test": 1246848431092138075}
         if interaction.channel.id in allowed_channels.values():
 
             if any(role in allowed_role_list for role in user_role_list):
-                for member in GUILD_MEMBERS:
+                for member in members:
                     if member.name == user:
                         if reserves.lower() == "no":
                             platoon_str = f"{platoon} Platoon"
                             section_str = f"{section} Section"
-                            platoon_role = discord.utils.get(GUILD_ROLES, name=platoon_str)
-                            section_role = discord.utils.get(GUILD_ROLES, name=section_str)
-                            recruit_role = discord.utils.get(GUILD_ROLES, name="Phase 1 Recruit")
+                            platoon_role = discord.utils.get(roles, name=platoon_str)
+                            section_role = discord.utils.get(roles, name=section_str)
+                            recruit_role = discord.utils.get(roles, name="Phase 1 Recruit")
                             if platoon_role and section_role:
                                 await member.add_roles(platoon_role, section_role, recruit_role)
                                 response_message = f"Added roles {platoon_role.name} and {section_role.name} to {user}."
@@ -299,10 +316,12 @@ async def add_recruit(interaction: discord.Interaction, user: str, platoon: str 
                             else:
                                 response_message = "One or more roles not found."
                         elif reserves.lower() == "yes":
+                            platoon_str = f"{platoon} Platoon"
+                            platoon_role = discord.utils.get(roles, name=platoon_str)
                             role_str = "Reserves"
-                            role = discord.utils.get(GUILD_ROLES, name=role_str)
+                            role = discord.utils.get(roles, name=role_str)
                             if role:
-                                await member.add_roles(role)
+                                await member.add_roles(role, platoon_role)
                                 response_message = f"Added role {role.name} to {user}."
                                 await welcome_channel.send(f"@everyone please welcome our newest recruit <@{member.id}> to the unit, they have been placed into our reserves")
                             else:
@@ -322,47 +341,53 @@ async def add_recruit(interaction: discord.Interaction, user: str, platoon: str 
 
 
 ### NEEDS TESTING ###
-@client.tree.command(name="Phase 1 Complete", 
+@client.tree.command(name="phase_1_complete", 
                      description="Assigns user with correct roles, adds service record and send congrats message")
 @commands.cooldown(1, 5, commands.BucketType.default)
 async def add_recruit(interaction: discord.Interaction, user: str, platoon: str, service_number: str, zap_number: str, application_date: str, verified_forces: str= None):
 
     try:
-        welcome_channel = GUILD.get_channel(RECRUIT_WELCOME_CHANNEL)
+        allowed_role_list = ["RTT", "SAT", "Officer"]
+        user_role_list = [role.name for role in interaction.user.roles]
+        welcome_channel = guild.get_channel(RECRUIT_WELCOME_CHANNEL)
 
 
-        member = discord.utils.get(GUILD_MEMBERS, name=user)
+        member = discord.utils.get(members, name=user)
         member_id = member.id
 
+        if any(role in allowed_role_list for role in user_role_list):
 
-        if member_id in SERVICE_RECORD:
-            await interaction.response.send_message(f"Service record for {user} already exists")
+            if member_id in SERVICE_RECORD:
+                await interaction.response.send_message(f"Service record for {user} already exists")
+            else:
+                SERVICE_RECORD[member_id] = {}
+                SERVICE_RECORD[member_id]["name"] = user
+                SERVICE_RECORD[member_id]["rank"] = "Trainee Rifleman"
+                SERVICE_RECORD[member_id]["service number"] = service_number
+                SERVICE_RECORD[member_id]["zap number"] = zap_number
+                SERVICE_RECORD[member_id]["application date"] = application_date
+                SERVICE_RECORD[member_id]["verified forces"] = verified_forces
+
+                SERVICE_RECORD[member_id]["qualifications"] = []
+                SERVICE_RECORD[member_id]["operations attended"] = []
+                SERVICE_RECORD[member_id]["staff roles"] = []
+                SERVICE_RECORD[member_id]["enlistment history"] = []
+                SERVICE_RECORD[member_id]["assignment history"] = []
+
+                roles = member.roles[1:]  # Exclude @everyone role
+                await member.remove_roles(*roles)
+
+                platoon_str = f"{platoon} Platoon"
+                platoon_role = discord.utils.get(roles, name=platoon_str)
+                rank_role = discord.utils.get(roles, name="Phase 2 Trainee Rifleman")
+                await member.add_roles(platoon_role, rank_role)
+                await interaction.response.send_message(f"Service record for {user} created! {platoon_str} and {rank_role} roles assigned!")
+                await welcome_channel.send(f"Congratulations to <@{member.id}> for completing the Phase 1 section of their CIC, Well done!")
+
+                with open(SERVICE_RECORD_FILE, 'w') as f:
+                    json.dump(SERVICE_RECORD, f)
         else:
-            SERVICE_RECORD[member_id] = {}
-            SERVICE_RECORD[member_id]["name"] = user
-            SERVICE_RECORD[member_id]["rank"] = "Trainee Rifleman"
-            SERVICE_RECORD[member_id]["service number"] = service_number
-            SERVICE_RECORD[member_id]["zap number"] = zap_number
-            SERVICE_RECORD[member_id]["application date"] = application_date
-            SERVICE_RECORD[member_id]["verified forces"] = verified_forces
-
-            SERVICE_RECORD[member_id]["qualifications"] = []
-            SERVICE_RECORD[member_id]["operations attended"] = []
-            SERVICE_RECORD[member_id]["staff roles"] = []
-            SERVICE_RECORD[member_id]["enlistment history"] = []
-            SERVICE_RECORD[member_id]["assignment history"] = []
-
-            # FUNCTIONALITY TO ADD
-            roles = member.roles[1:]  # Exclude @everyone role
-            await member.remove_roles(*roles)
-
-            platoon_str = f"{platoon} Platoon"
-            platoon_role = discord.utils.get(GUILD_ROLES, name=platoon_str)
-            rank_role = discord.utils.get(GUILD_ROLES, name="Phase 2 Trainee Rifleman")
-            await member.add_roles(platoon_role, rank_role)
-
-            await welcome_channel.send(f"Congratulations to <@{member.id}> for completing the Phase 1 section of their CIC, Well done!")
-
+            await interaction.response.send_message(f"ERROR: You do not have the required roles")
     except Exception as e:
         await interaction.response.send_message(f"ERROR: {e}")
 
@@ -406,13 +431,13 @@ async def add_service_record(interaction:discord.Interaction, user: str, rank: s
         allowed_role_list = ["PAT", "SAT"]
         user_role_list = [role.name for role in interaction.user.roles]
         
-        allowed_channels = {"G1 Personnel Admin Channel": 701267972475584525}
+        allowed_channels = {"G1 Personnel Admin Channel": 1292418540544069652, "Bot Test": 1246848431092138075}
         
         if interaction.channel.id in allowed_channels.values():
 
             if any(role in allowed_role_list for role in user_role_list):
 
-                member = discord.utils.get(GUILD_MEMBERS, name=user)
+                member = discord.utils.get(members, name=user)
                 member_id = member.id
 
 
@@ -486,13 +511,14 @@ async def get_service_record(interaction: discord.Interaction, user: str):
         
         allowed_channels = {"1 Platoon General": 680803082644226172, 
                             "7 Platoon General": 822221048320753695, 
-                            "G1 Personnel Admin Channel": 701267972475584525}
+                            "G1 Personnel Admin Channel": 701267972475584525, 
+                            "Bot Test": 1246848431092138075}
         
         if interaction.channel.id in allowed_channels.values():
             if any(role in allowed_role_list for role in user_role_list):
                 SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
                 # Get member by name
-                member = discord.utils.get(GUILD_MEMBERS, name=user)
+                member = discord.utils.get(members, name=user)
             
                 if member is None:
                     await interaction.response.send_message(f"User {user} not found.", ephemeral=True)
@@ -553,14 +579,15 @@ async def update_service_record(interaction:discord.Interaction, user: str, rank
         allowed_role_list = ["PAT", "SAT"]
         user_role_list = [role.name for role in interaction.user.roles]
         
-        allowed_channels = {"G1 Personnel Admin Channel": 701267972475584525}
+        allowed_channels = {"G1 Personnel Admin Channel": 701267972475584525, 
+                            "Bot Test": 1246848431092138075}
         
         if interaction.channel.id in allowed_channels.values():
 
             if any(role in allowed_role_list for role in user_role_list):
                 SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
 
-                member = discord.utils.get(GUILD_MEMBERS, name=user)
+                member = discord.utils.get(members, name=user)
                 if member is None:
                     await interaction.response.send_message("User not found in this server.", ephemeral=True)
                     return
@@ -727,13 +754,14 @@ async def add_qualification_completed(interaction:discord.Interaction, qualifica
 async def important_channels(interaction:discord.Interaction):
     try:
         important_channels = {"calendar": (843347366345441280, "Where all events and RSVP lists are posted"),
-                              "teamspeak, server and mods": (792856101015257109, "Where all Teamspeak, ArmA server and Mods info is found"),
-                              "rfn docs and info": (833287449391398942, "Where all documents and manuals for Riflemen can be found"),
-                              "orbat": (842625681565548554, "Unit Order of Battle info"),
-                              "role request": (825903321289064458, "Channel to use if you want to request a specific role"),
+                              "teamspeak, server and mods": (1292117684279971922, "Where all Teamspeak, ArmA server and Mods info is found"),
+                              "general docs and info": (1292117378100105246, "Where all documents and info for enlisted personnel can be found"),
+                              "organisation": (1292123506846466131, "Unit Organisational info"),
+                              "training and cadre info": (1292428757264629790, "Information about different trainings and cadres available"),
                               "1 platoon general": (680803082644226172, "General Channel for 1 Platoon"),
+                              "role request": (1292426637454872666, "Forum to use if you want to request a specific role"),
                               "7 platoon general": (822221048320753695, "General Channel for 7 Platoon(Reserves)"),
-                              "phase 1 channel": (843347965376069642, "Channel for discussing and organising Phase 1 training")}
+                              "phase 1 and 2 training forum": (1292430453428719677, "Forum for everything regarding phase 1 and phase 2 training")}
         
 
         strings_list = []
@@ -750,11 +778,7 @@ async def important_channels(interaction:discord.Interaction):
     except Exception as e:
         print(e)
 
-# @client.tree.command(name="log_attendance", description="Lists and links important channels")
-# @commands.cooldown(1, 5, commands.BucketType.default)
-# async def important_channels(interaction:discord.Interaction):
-
-
+        
 		### VIEW ORBAT COMMAND ###
 
 @client.tree.command(
@@ -767,4 +791,5 @@ async def view_orbat(interaction=discord.Interaction):
     except Exception as e:
         print(e)
 
-client.run('') # 20x Bot
+
+client.run(BOT_KEY) # 20x Bot
