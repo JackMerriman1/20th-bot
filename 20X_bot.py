@@ -841,6 +841,73 @@ async def update_attendance(interaction: discord.Interaction, attendees: str):
         print(e)
 
 
+@client.tree.command(name="no_shows", description="list those who didnt come when they said they would")
+@commands.cooldown(1, 5, commands.BucketType.default)
+async def no_shows(interaction: discord.Interaction, no_shows: str):
+    try:
+        
+        allowed_role_list = ["SAT"]
+        user_role_list = [role.name for role in interaction.user.roles]
+
+        if any(role in allowed_role_list for role in user_role_list):
+            SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
+            users = no_shows.split(",")
+
+            for id, record in SERVICE_RECORD.items():
+                
+                if record["name"] in users:
+                    # Ensure "no shows" key exists
+                    if "no shows" not in record:
+                        record["no shows"] = 0
+                    
+                    # Increment or set the no-show count
+                    SERVICE_RECORD[id]["no shows"] += 1
+
+        else:
+            await interaction.response.send_message("You dont have the required roles!")
+
+
+        with open(SERVICE_RECORD_FILE, 'w') as f:
+                json.dump(SERVICE_RECORD, f)
+        
+        await interaction.response.send_message("no shows updated")
+
+    except Exception as e:
+        print(f"ERROR: {e}")
+
+
+@client.tree.command(name="view_no_shows", description="view no_shows for a user")
+@commands.cooldown(1, 5, commands.BucketType.default)
+async def view_no_shows(interaction: discord.Interaction, user: str):
+    try:
+        
+        allowed_role_list = ["Junior NCO", "Senior NCO", "Officer"]
+        user_role_list = [role.name for role in interaction.user.roles]
+
+        if any(role in allowed_role_list for role in user_role_list):
+            SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
+            
+            # Check if user exists in SERVICE_RECORD
+            user_record = None
+            for record_key, record_value in SERVICE_RECORD.items():
+                if record_value["name"] == user:
+                    user_record = record_value
+                    break
+            
+            if user_record:
+
+                await interaction.response.send_message(f"No shows for {user}: {SERVICE_RECORD[record_key]['no shows']}")
+            else:
+                await interaction.response.send_message(f"No attendance record found for {user}.")
+        
+        else:
+            await interaction.response.send_message("You don't have the required roles!")
+
+
+    except Exception as e:
+        print(e)
+
+
 @client.tree.command(name="view_attendance", description="view attendance for a user")
 @commands.cooldown(1, 5, commands.BucketType.default)
 async def view_attendance(interaction: discord.Interaction, user: str):
