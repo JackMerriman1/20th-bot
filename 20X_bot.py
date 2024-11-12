@@ -44,6 +44,8 @@ else:
 SERVICE_RECORD_FILE = os.path.join(BASE_PATH, 'service_record_data.json')
 SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
 
+BANNED_FILE_PATH = os.path.join(BASE_PATH, 'banned_list.json')
+
 ALL_EVENTS_FILE = os.path.join(BASE_PATH, 'all_events.json')
 ALL_EVENTS = load_data(ALL_EVENTS_FILE)
 
@@ -605,7 +607,7 @@ async def update_service_record(interaction:discord.Interaction, user: str, rank
         allowed_role_list = ["PAT", "SAT"]
         user_role_list = [role.name for role in interaction.user.roles]
         
-        allowed_channels = {"G1 Personnel Admin Channel": 701267972475584525, "Bot Test": 1246848431092138075}
+        allowed_channels = {"G1 Personnel Admin Channel": 1292418540544069652, "Bot Test": 1246848431092138075}
         
         if interaction.channel.id in allowed_channels.values():
 
@@ -1012,6 +1014,51 @@ async def view_lates(interaction: discord.Interaction, user: str):
 
     except Exception as e:
         print(e)
+
+@client.tree.command(name="ban", description="add people to the ban list")
+@commands.cooldown(1, 5, commands.BucketType.default)
+async def ban(interaction: discord.Interaction, steam64id: str):
+    try:
+        
+        allowed_role_list = [ "Officer", "SAT"]
+        user_role_list = [role.name for role in interaction.user.roles]
+
+        if any(role in allowed_role_list for role in user_role_list):
+            BANNED_LIST = load_data(BANNED_FILE_PATH)
+
+            if steam64id not in BANNED_LIST["banned"]:
+                BANNED_LIST["banned"].append(steam64id)
+                await interaction.response.send_message(f"steam64 ID: **{steam64id}** added to banned list")
+                with open(BANNED_FILE_PATH, 'w') as f:
+                    json.dump(BANNED_LIST, f)
+
+            else:
+                await interaction.response.send_message(f"steam64 ID: **{steam64id}** already in banned list")
+
+    except Exception as e:
+        await interaction.response.send_message(f"ERROR: {e}\nplease screenshot this and sent it to boniface")
+
+@client.tree.command(name="check_banned", description="add people to the ban list")
+@commands.cooldown(1, 5, commands.BucketType.default)
+async def check_banned(interaction: discord.Interaction, steam64id: str):
+    try:
+        
+        allowed_role_list = [ "Officer", "SAT"]
+        user_role_list = [role.name for role in interaction.user.roles]
+
+        if any(role in allowed_role_list for role in user_role_list):
+            BANNED_LIST = load_data(BANNED_FILE_PATH)
+
+            if steam64id not in BANNED_LIST["banned"]:
+                await interaction.response.send_message(f"steam64 ID: **{steam64id}** Is NOT banned")
+                with open(BANNED_FILE_PATH, 'w') as f:
+                    json.dump(BANNED_LIST, f)
+
+            else:
+                await interaction.response.send_message(f"steam64 ID: **{steam64id}** is in banned list, consult Keown immediately!")
+
+    except Exception as e:
+        await interaction.response.send_message(f"ERROR: {e}\nplease screenshot this and sent it to boniface")
 
 
 @client.tree.command(
