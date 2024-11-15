@@ -488,31 +488,31 @@ async def add_service_record(interaction:discord.Interaction, user: str, rank: s
                     if qualifications == None:
                         SERVICE_RECORD[member_id]["qualifications"] = []
                     else:
-                        qualifications = qualifications.split(",")
+                        qualifications = qualifications.split("£")
                         SERVICE_RECORD[member_id]["qualifications"] = qualifications
 
                     if operations == None:
                         SERVICE_RECORD[member_id]["operations attended"] = []
                     else:
-                        operations = operations.split(",")
+                        operations = operations.split("£")
                         SERVICE_RECORD[member_id]["operations attended"] = operations
 
                     if staff_roles == None:
                         SERVICE_RECORD[member_id]["staff roles"] = []
                     else:
-                        staff_roles = staff_roles.split(",")
+                        staff_roles = staff_roles.split("£")
                         SERVICE_RECORD[member_id]["staff roles"] = staff_roles
 
                     if enlistment_history == None:
                         SERVICE_RECORD[member_id]["enlistment history"] = []
                     else:
-                        enlistment_history = enlistment_history.split(",")
+                        enlistment_history = enlistment_history.split("£")
                         SERVICE_RECORD[member_id]["enlistment history"] = enlistment_history
 
                     if assignment_history == None:
                         SERVICE_RECORD[member_id]["assignment history"] = []
                     else:
-                        assignment_history = assignment_history.split(",")
+                        assignment_history = assignment_history.split("£")
                         SERVICE_RECORD[member_id]["assignment history"] = assignment_history
 
                     
@@ -692,7 +692,7 @@ async def add_operation_attendance(interaction:discord.Interaction, op_name: str
         if any(role in allowed_role_list for role in user_role_list):
             SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
 
-            users = users.split(",")
+            users = users.split("£")
             users_in_record = []
             user_not_found = []
 
@@ -738,7 +738,7 @@ async def add_qualification_completed(interaction:discord.Interaction, qualifica
             # Debug: Check initial state of SERVICE_RECORD
             print("Initial SERVICE_RECORD:", SERVICE_RECORD)
 
-            users = users.split(",")
+            users = users.split("£")
             users_in_record = []
             user_not_found = []
 
@@ -815,7 +815,7 @@ async def update_attendance(interaction: discord.Interaction, attendees: str):
 
         if any(role in allowed_role_list for role in user_role_list):
             SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
-            attended_users = attendees.split(",")
+            attended_users = attendees.split("£")
 
             for id, record in SERVICE_RECORD.items():
                 if "attendance" not in record:
@@ -853,7 +853,7 @@ async def no_shows(interaction: discord.Interaction, no_shows: str):
 
         if any(role in allowed_role_list for role in user_role_list):
             SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
-            users = no_shows.split(",")
+            users = no_shows.split("£")
 
             for id, record in SERVICE_RECORD.items():
                 
@@ -960,7 +960,7 @@ async def lates(interaction: discord.Interaction, lates: str):
 
         if any(role in allowed_role_list for role in user_role_list):
             SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
-            users = lates.split(",")
+            users = lates.split("£")
 
             for id, record in SERVICE_RECORD.items():
                 
