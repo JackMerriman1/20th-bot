@@ -681,6 +681,47 @@ async def update_service_record(interaction:discord.Interaction, user: str, rank
     except Exception as e:
                 print(f"An unexpected error occurred: {e}")
 
+@client.tree.command(name="delete_service_record_entry", description="delete an entry in a user's service record")
+@commands.cooldown(1, 5, commands.BucketType.default)
+async def delete_service_record_entry(interaction:discord.Interaction, user: str, entry_header: str, entry: str):
+    try:
+        allowed_role_list = ["PAT", "SAT"]
+        user_role_list = [role.name for role in interaction.user.roles]
+        
+        allowed_channels = {"G1 Personnel Admin Channel": 1292418540544069652, "Bot Test": 1246848431092138075}
+
+        SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
+
+        if interaction.channel.id in allowed_channels.values():
+
+            if any(role in allowed_role_list for role in user_role_list):
+                for member_id in SERVICE_RECORD:
+                    if SERVICE_RECORD[member_id]["name"] == user:
+                        if len(SERVICE_RECORD[member_id][entry_header.lower()]) > 0:
+                            SERVICE_RECORD[member_id][entry_header.lower()].remove(entry)
+                            await interaction.response.send_message(f"{entry} deleted from record")
+
+                            with open(SERVICE_RECORD_FILE, 'w') as f:
+                                json.dump(SERVICE_RECORD, f)
+                        else:
+                            await interaction.response.send_message(f"{entry} not found in record for {user}")
+
+                                
+            else:
+                await interaction.response.send_message("You do not have the required roles to use this command")
+
+        else:
+            await interaction.response.send_message("Command only available in Bot Test or G1 Personnel Admin")
+    
+    except Exception as e:
+        print(f"ERRRRRRRRORRRRRR:{e}")
+
+
+
+
+
+
+
 @client.tree.command(name="add_operation_attendance", description="update all users service record who attended the op")
 @commands.cooldown(1, 5, commands.BucketType.default)
 async def add_operation_attendance(interaction:discord.Interaction, op_name: str, users: str):
