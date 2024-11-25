@@ -366,7 +366,7 @@ async def add_recruit(interaction: discord.Interaction, user: str, platoon: str,
 @client.tree.command(name="phase_1_complete", 
                      description="Assigns user with correct roles, adds service record and send congrats message")
 @commands.cooldown(1, 5, commands.BucketType.default)
-async def add_recruit(interaction: discord.Interaction, user: str, platoon: str, service_number: str, zap_number: str, application_date: str, verified_forces: str= None):
+async def phase_1_complete(interaction: discord.Interaction, user: str, platoon: str, service_number: str, zap_number: str, application_date: str, verified_forces: str= None):
 
     try:
         allowed_role_list = ["RTT", "SAT", "Officer"]
@@ -643,27 +643,27 @@ async def update_service_record(interaction:discord.Interaction, user: str, rank
                         record["verified forces"] = verified_forces
 
                     if qualifications != None:
-                        qualifications = qualifications.split(",")
+                        qualifications = qualifications.split("£")
                         for qualification in qualifications:
                             record["qualifications"].append(qualification)
 
                     if operations != None:
-                        operations = operations.split(",")
+                        operations = operations.split("£")
                         for operation in operations:
                             record["operations attended"].append(operation)
 
                     if staff_roles != None:
-                        staff_roles = staff_roles.split(",")
+                        staff_roles = staff_roles.split("£")
                         for staff_role in staff_roles:
                             record["staff roles"].append(staff_role)
 
                     if enlistment_history != None:
-                        enlistment_history = enlistment_history.split(",")
+                        enlistment_history = enlistment_history.split("£")
                         for event in enlistment_history:
                             record["enlistment history"].append(event)
 
                     if assignment_history != None:
-                        assignment_history = assignment_history.split(",")
+                        assignment_history = assignment_history.split("£")
                         for assignment in assignment_history:
                             record["assignment history"].append(assignment)
 
@@ -715,12 +715,6 @@ async def delete_service_record_entry(interaction:discord.Interaction, user: str
     
     except Exception as e:
         print(f"ERRRRRRRRORRRRRR:{e}")
-
-
-
-
-
-
 
 @client.tree.command(name="add_operation_attendance", description="update all users service record who attended the op")
 @commands.cooldown(1, 5, commands.BucketType.default)
