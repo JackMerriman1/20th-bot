@@ -7,6 +7,7 @@ import threading
 import time
 from secret import BOT_KEY, SERVER_ID_20TH
 import os
+import praw
 
 CALENDAR_CHANNEL_ID = 843347366345441280 ###
 ATTENDING_REACTION = '✅'
@@ -22,6 +23,9 @@ intents.messages = True
 intents.guilds = True  # Add this line to enable the messages intent
 
 client = commands.Bot(command_prefix='!', intents=intents)
+
+timestamp_file = "last_post_time.json"
+
 # guild = client.get_guild(SERVER_ID_20TH)
 
 # if guild:
@@ -51,6 +55,8 @@ ALL_EVENTS = load_data(ALL_EVENTS_FILE)
 
 ORBAT_IMAGE_PATH = os.path.join(BASE_PATH, '20th_ORBAT.jpg')
 ORBAT_IMAGE_PATH = '20th_ORBAT.jpg'
+
+timestamp_file = os.path.join(BASE_PATH, 'last_post_time.json')
 
             ###BACKUP TO EMAIL EVERY 3 DAYS###
 
@@ -1095,6 +1101,46 @@ async def check_banned(interaction: discord.Interaction, steam64id: str):
     except Exception as e:
         await interaction.response.send_message(f"ERROR: {e}\nplease screenshot this and sent it to boniface")
 
+@client.tree.command(name="reddit_post", description="generate a reddit recruitment post")
+@commands.cooldown(1, 5, commands.BucketType.default)
+async def reddit_post(interaction: discord.Interaction):
+    try:
+        subreddit_name = "FindAUnit"  # Replace with your target subreddit
+        title = "[A3][UK/EU][Recruiting] 20th Armoured Brigade Combat Team [MilSim]"
+        body = """We are the 20th Armoured Brigade Combat Team, A realistic British Armoured Infantry MilSim unit.
+        We fulfil many roles:
+
+        - Armoured Infantry (Main)
+        - Light Infantry
+        - Recce
+        - Armour
+        
+        Event Timings: Saturdays 1900UK Time
+        Practice: Twice monthly on Wednesdays/Fridays
+
+        New members go through a structured weapons, vehicles and tactics familiarisation.
+        If you're interested then either comment, message me directly or join our discord below!
+
+        DISCORD: https://discord.gg/ywPjEaqFST"""
+
+        # Check if posting is allowed
+        if can_post(timestamp_file):
+            try:
+                subreddit = reddit.subreddit(subreddit_name)
+                submission = subreddit.submit(title, selftext=body)
+                print(f"Post submitted: {submission.title} (ID: {submission.id})")
+                update_last_post_time(timestamp_file)
+
+            except Exception as e:
+                print(f"An error occurred: {e}")
+        else:
+            last_post_time = get_last_post_time()
+            next_post_time = last_post_time + timedelta(hours=48)
+            print(f"Cannot post yet. You can post again after {next_post_time.strftime('%Y-%m-%d %H:%M:%S')}.")
+        
+
+    except Exception as e:
+        await interaction.response.send_message(f"ERROR: {e}\nplease screenshot this and sent it to boniface")
 
 @client.tree.command(
     name="view_orbat",

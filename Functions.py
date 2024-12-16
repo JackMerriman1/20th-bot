@@ -8,6 +8,7 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 import time
+import praw
 
 members_cache = {}
 cache_expiry = 60 * 5  # Cache expiry time in seconds
@@ -125,6 +126,7 @@ async def post_rsvp_list(message_id, event_name, event_date, channel, client, gu
         # Store the RSVP message ID and channel ID to update it later
         client.event_messages[message_id]['rsvp_message_id'] = rsvp_message.id
         client.event_messages[message_id]['rsvp_channel_id'] = channel.id
+
     except Exception as e:
         print(f"An error occurred: {e}")
 
@@ -239,3 +241,23 @@ def run_email_scheduler():
         send_email_with_json(smtp_server, smtp_port, sender_email, sender_password, recipient_email, subject, body, json_file_path)
         print("Email sent. Waiting for 3 days to send the next email.")
         time.sleep(60*60*24*3)
+
+def get_last_post_time(timestamp_file):
+    if os.path.exists(timestamp_file):
+        with open(timestamp_file, "r") as f:
+            data = json.load(f)
+            return datetime.fromisoformat(data["last_post_time"])
+    return None
+
+# Function to update the timestamp of the last post
+def update_last_post_time(timestamp_file):
+    with open(timestamp_file, "w") as f:
+        data = {"last_post_time": datetime.now().isoformat()}
+        json.dump(data, f)
+
+# Function to check if 48 hours have passed
+def can_post(timestamp_file):
+    last_post_time = get_last_post_time(timestamp_file)
+    if last_post_time is None:
+        return True  # No record, so allow posting
+    return datetime.now() >= last_post_time + timedelta(hours=48)
