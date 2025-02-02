@@ -1,7 +1,7 @@
 import discord
 import json
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -9,6 +9,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 import time
 import praw
+import os
 
 members_cache = {}
 cache_expiry = 60 * 5  # Cache expiry time in seconds
@@ -243,11 +244,9 @@ def run_email_scheduler():
         time.sleep(60*60*24*3)
 
 def get_last_post_time(timestamp_file):
-    if os.path.exists(timestamp_file):
-        with open(timestamp_file, "r") as f:
-            data = json.load(f)
-            return datetime.fromisoformat(data["last_post_time"])
-    return None
+    with open(timestamp_file, "r") as f:
+        data = json.load(f)
+        return datetime.fromisoformat(data["last_post_time"])
 
 # Function to update the timestamp of the last post
 def update_last_post_time(timestamp_file):
@@ -258,6 +257,7 @@ def update_last_post_time(timestamp_file):
 # Function to check if 48 hours have passed
 def can_post(timestamp_file):
     last_post_time = get_last_post_time(timestamp_file)
-    if last_post_time is None:
-        return True  # No record, so allow posting
-    return datetime.now() >= last_post_time + timedelta(hours=48)
+    if datetime.now() >= last_post_time + (60*60*48) or last_post_time == None:
+        return True
+    else:
+        return False

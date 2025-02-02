@@ -58,6 +58,14 @@ ORBAT_IMAGE_PATH = '20th_ORBAT.jpg'
 
 timestamp_file = os.path.join(BASE_PATH, 'last_post_time.json')
 
+# reddit = praw.Reddit(
+#     client_id="4ehWIZwmUoBrdtSkwzaElQ",
+#     client_secret="Ym2RWnOYB2HW1p9EUpTvKvrmUfgzLQ",
+#     username="Even-Towel2131",
+#     password="Normandy_1944",
+#     user_agent="script:20th_recruitment:v1.0 (by u/Even-Towel2131)"
+# )
+
             ###BACKUP TO EMAIL EVERY 3 DAYS###
 
 email_thread = threading.Thread(target=run_email_scheduler)
@@ -1127,14 +1135,14 @@ async def reddit_post(interaction: discord.Interaction):
         if can_post(timestamp_file):
             try:
                 subreddit = reddit.subreddit(subreddit_name)
-                submission = subreddit.submit(title, selftext=body)
+                submission = subreddit.submit(title, selftext=body, flair_id="acf7f706-2050-11e6-9d2c-0e78d0cc7a07")
                 print(f"Post submitted: {submission.title} (ID: {submission.id})")
                 update_last_post_time(timestamp_file)
 
             except Exception as e:
                 print(f"An error occurred: {e}")
         else:
-            last_post_time = get_last_post_time()
+            last_post_time = get_last_post_time(timestamp_file)
             next_post_time = last_post_time + timedelta(hours=48)
             print(f"Cannot post yet. You can post again after {next_post_time.strftime('%Y-%m-%d %H:%M:%S')}.")
         
@@ -1153,4 +1161,4 @@ async def view_orbat(interaction=discord.Interaction):
         print(e)
 
 
-client.run(BOT_KEY) # 20x Bot
+client.run(BOT_KEY)
