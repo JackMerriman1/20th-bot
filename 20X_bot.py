@@ -101,17 +101,21 @@ async def fetch_guild_and_members():
 @commands.cooldown(1, 5, commands.BucketType.default)
 async def create_event(interaction: discord.Interaction, event_name: str, event_description: str, event_date: str, step_off_time: str):
     try:
-        # Defer the interaction to give more time to process
+        # Defer the interaction to allow time for processing
         await interaction.response.defer()
 
-        allowed_role_list = ["MDT", "Junior NCO", "Senior NCO", "SAT"]
+        allowed_role_list = ["Officer", "MDT", "Junior NCO", "Senior NCO", "SAT"]
         user_role_list = [role.name for role in interaction.user.roles]
 
         if any(role in allowed_role_list for role in user_role_list):
-            # Create the Embed and send it into the channel
+            # Generate timestamps
             event_discord_timestamp, relative_timestamp, unix_timestamp = generate_unix_timestamp_and_relative(event_date, step_off_time)
 
-            embed = create_embed(f"New Event Created: {event_name}", f"{event_description}", f"\nServer start: <t:{unix_timestamp}>\nBattle-Prep begins: <t:{unix_timestamp + 900}>\nStep Off: <t:{unix_timestamp + 1800}>\n\n\nEvent Begins {relative_timestamp}")
+            embed = create_embed(
+                f"New Event Created: {event_name}",
+                f"{event_description}",
+                f"\nServer start: <t:{unix_timestamp}>\nBattle-Prep begins: <t:{unix_timestamp + 900}>\nStep Off: <t:{unix_timestamp + 1800}>\n\n\nEvent Begins {relative_timestamp}"
+            )
             
             await interaction.followup.send(embed=embed)
             event_message = await interaction.original_response()
@@ -121,41 +125,36 @@ async def create_event(interaction: discord.Interaction, event_name: str, event_
             await event_message.add_reaction(MAYBE_ATTENDING_REACTION)
 
             channel_id = interaction.channel_id
-            # Initialise entry into ALL_EVENTS dict for this event with message id as the key
             event_message_id = event_message.id
-            ALL_EVENTS[event_name] = {}
-
-            # Add keys, values into dict
-            event_discord_timestamp, relative_timestamp, unix_timestamp = generate_unix_timestamp_and_relative(event_date, step_off_time)
-            ALL_EVENTS[event_name]["event message id"] = event_message_id
-            ALL_EVENTS[event_name]["event channel id"] = channel_id
-            ALL_EVENTS[event_name]["event desc"] = event_description
-            ALL_EVENTS[event_name]["event time"] = step_off_time
-            ALL_EVENTS[event_name]["event date"] = event_date
-            ALL_EVENTS[event_name]["discord timestamp"] = event_discord_timestamp
-            ALL_EVENTS[event_name]["relative timestamp"] = relative_timestamp
-            ALL_EVENTS[event_name]["unix timestamp"] = unix_timestamp
+            ALL_EVENTS[event_name] = {
+                "event message id": event_message_id,
+                "event channel id": channel_id,
+                "event desc": event_description,
+                "event time": step_off_time,
+                "event date": event_date,
+                "discord timestamp": event_discord_timestamp,
+                "relative timestamp": relative_timestamp,
+                "unix timestamp": unix_timestamp
+            }
 
             with open(ALL_EVENTS_FILE, 'w') as f:
                 json.dump(ALL_EVENTS, f)
             
-
             user_mentions = "<@&680795785423880248> <@&680795766125887596> <@&680795741417242804> <@&680795653345116183> <@&680795516228993025>"
-            current_timestamp = datetime.now()
-            thread_duration = (unix_timestamp - current_timestamp) + (60*60)
+            # current_timestamp = datetime.now()
+            # thread_duration_seconds = int(unix_timestamp - current_timestamp.timestamp)
+            # print(thread)
 
-            thread = await event_message.create_thread(name=f"{event_name}: {event_date} - {step_off_time}", auto_archive_duration=thread_duration)
-            await thread.send(f"{user_mentions} Please RSVP to the upcoming event {[event_name]} here: {event_message.jump_url}")
+            thread = await event_message.create_thread(name=f"{event_name}: {event_date} - {step_off_time}")
+            await thread.send(f"{user_mentions} Please RSVP to the upcoming event [{event_name}] here: {event_message.jump_url}")
             
         else:
-            await interaction.response.send_message("You dont have the required roles to create events!")
+            # Fix: Use `followup.send` instead of `response.send_message` after deferring
+            await interaction.followup.send("You don't have the required roles to create events!", ephemeral=True)
 
     except Exception as e:
-        print(e)
-        try:
-            await interaction.followup.send(f"**ERROR**: *{e}* Contact @boniface for support")
-        except Exception as followup_exception:
-            print(followup_exception)
+        await interaction.followup.send(f"An error occurred: {e}", ephemeral=True)
+
 
 # Handle user reactions
 @client.event
