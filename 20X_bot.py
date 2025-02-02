@@ -5,7 +5,7 @@ from Functions import *
 import asyncio
 import threading
 import time
-from secret import BOT_KEY, SERVER_ID_20TH
+from secret import BOT_KEY_20X, SERVER_ID_20TH, BOT_KEY_TEST, SERVER_ID_TEST
 import os
 import praw
 
@@ -26,14 +26,14 @@ client = commands.Bot(command_prefix='!', intents=intents)
 
 timestamp_file = "last_post_time.json"
 
-# guild = client.get_guild(SERVER_ID_20TH)
+# guild = client.get_guild(SERVER_ID)
 
 # if guild:
 #     members = guild.members  # Access cached members directly
 #     roles = guild.roles      # Access cached roles directly
 #     print(f"Guild '{guild.name}' has {len(members)} members and {len(roles)} roles.")
 # else:
-#     print(f"Bot is not connected to the server with ID {SERVER_ID_20TH}")
+#     print(f"Bot is not connected to the server with ID {SERVER_ID}")
 
 
 #tree = app_commands.CommandTree(client)
@@ -42,8 +42,13 @@ is_server = os.path.exists('20X_BOT/service_record_data.json')
 
 if is_server:
     BASE_PATH = '20X_BOT/'  # Path for the server
+    BOT_KEY = BOT_KEY_20X
+    SERVER_ID = SERVER_ID_20TH
+    
 else:
     BASE_PATH = ''  # Path for local machine
+    BOT_KEY = BOT_KEY_TEST
+    SERVER_ID = SERVER_ID_TEST
 
 SERVICE_RECORD_FILE = os.path.join(BASE_PATH, 'service_record_data.json')
 SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
@@ -81,12 +86,12 @@ async def on_ready():
 
 async def fetch_guild_and_members():
     global GUILD, GUILD_MEMBERS, GUILD_ROLES
-    GUILD = client.get_guild(SERVER_ID_20TH)
+    GUILD = client.get_guild(SERVER_ID)
     if GUILD:
         GUILD_MEMBERS = GUILD.members
         GUILD_ROLES = GUILD.roles
     else:
-        print(f"Bot is not connected to the server with ID {SERVER_ID_20TH}")  # Add this line
+        print(f"Bot is not connected to the server with ID {SERVER_ID}")  # Add this line
     print("time")
 
                 
@@ -94,7 +99,7 @@ async def fetch_guild_and_members():
 
 @client.tree.command(name="create_event", description="Create an Event")
 @commands.cooldown(1, 5, commands.BucketType.default)
-async def create_event(interaction: discord.Interaction, event_name: str, event_description: str, event_date: str, event_time: str):
+async def create_event(interaction: discord.Interaction, event_name: str, event_description: str, event_date: str, step_off_time: str):
     try:
         # Defer the interaction to give more time to process
         await interaction.response.defer()
@@ -104,7 +109,7 @@ async def create_event(interaction: discord.Interaction, event_name: str, event_
 
         if any(role in allowed_role_list for role in user_role_list):
             # Create the Embed and send it into the channel
-            event_discord_timestamp, relative_timestamp, unix_timestamp = generate_unix_timestamp_and_relative(event_date, event_time)
+            event_discord_timestamp, relative_timestamp, unix_timestamp = generate_unix_timestamp_and_relative(event_date, step_off_time)
 
             embed = create_embed(f"New Event Created: {event_name}", f"{event_description}", f"\nServer start: <t:{unix_timestamp}>\nBattle-Prep begins: <t:{unix_timestamp + 900}>\nStep Off: <t:{unix_timestamp + 1800}>\n\n\nEvent Begins {relative_timestamp}")
             
@@ -116,17 +121,16 @@ async def create_event(interaction: discord.Interaction, event_name: str, event_
             await event_message.add_reaction(MAYBE_ATTENDING_REACTION)
 
             channel_id = interaction.channel_id
-            await interaction.followup.send("<@&680795785423880248> <@&680795766125887596> <@&680795741417242804> <@&680795653345116183> <@&680795516228993025> Please RSVP above")
             # Initialise entry into ALL_EVENTS dict for this event with message id as the key
             event_message_id = event_message.id
             ALL_EVENTS[event_name] = {}
 
             # Add keys, values into dict
-            event_discord_timestamp, relative_timestamp, unix_timestamp = generate_unix_timestamp_and_relative(event_date, event_time)
+            event_discord_timestamp, relative_timestamp, unix_timestamp = generate_unix_timestamp_and_relative(event_date, step_off_time)
             ALL_EVENTS[event_name]["event message id"] = event_message_id
             ALL_EVENTS[event_name]["event channel id"] = channel_id
             ALL_EVENTS[event_name]["event desc"] = event_description
-            ALL_EVENTS[event_name]["event time"] = event_time
+            ALL_EVENTS[event_name]["event time"] = step_off_time
             ALL_EVENTS[event_name]["event date"] = event_date
             ALL_EVENTS[event_name]["discord timestamp"] = event_discord_timestamp
             ALL_EVENTS[event_name]["relative timestamp"] = relative_timestamp
@@ -134,6 +138,15 @@ async def create_event(interaction: discord.Interaction, event_name: str, event_
 
             with open(ALL_EVENTS_FILE, 'w') as f:
                 json.dump(ALL_EVENTS, f)
+            
+
+            user_mentions = "<@&680795785423880248> <@&680795766125887596> <@&680795741417242804> <@&680795653345116183> <@&680795516228993025>"
+            current_timestamp = datetime.now()
+            thread_duration = (unix_timestamp - current_timestamp) + (60*60)
+
+            thread = await event_message.create_thread(name=f"{event_name}: {event_date} - {step_off_time}", auto_archive_duration=thread_duration)
+            await thread.send(f"{user_mentions} Please RSVP to the upcoming event {[event_name]} here: {event_message.jump_url}")
+            
         else:
             await interaction.response.send_message("You dont have the required roles to create events!")
 
@@ -271,7 +284,7 @@ async def list_events(interaction: discord.Interaction):
                 channel_id = ALL_EVENTS[event_name]["event channel id"]
                 message_id = ALL_EVENTS[event_name]["event message id"]
 
-                full_string = f"{event_name}: {datetime} starts {relative_datetime}: RSVP here - https://discord.com/channels/{SERVER_ID_20TH}/{channel_id}/{message_id}"
+                full_string = f"{event_name}: {datetime} starts {relative_datetime}: RSVP here - https://discord.com/channels/{SERVER_ID}/{channel_id}/{message_id}"
                 all_events.append(full_string)
 
         embed = create_embed("All upcoming events", "List of all events")
@@ -289,14 +302,14 @@ async def event_auto_reminder():
         try:
             current_timestamp = int(time.time())
             for event_name in ALL_EVENTS:
-                event_timestamp = int(ALL_EVENTS[event_name]["unix timestamp"])
+                step_off_timestamp = int(ALL_EVENTS[event_name]["unix timestamp"])
                 event_relative_timestamp = ALL_EVENTS[event_name]["relative timestamp"]
                 channel_id = ALL_EVENTS[event_name]["event channel id"]
                 message_id = ALL_EVENTS[event_name]["event message id"]
                 channel = client.get_channel(channel_id)
 
-                if event_timestamp - 21600 < current_timestamp < event_timestamp - 18000:
-                    await channel.send(f"@everyone REMINDER: Event {event_name} tonight starting {event_relative_timestamp}\n- Make sure your modpack is up to date\n- if you haven't already RSVP here: https://discord.com/channels/{SERVER_ID_20TH}/{channel_id}/{message_id}\nThanks :).")
+                if step_off_timestamp - 21600 < current_timestamp < step_off_timestamp - 18000:
+                    await channel.send(f"@everyone REMINDER: Event {event_name} tonight starting {event_relative_timestamp}\n- Make sure your modpack is up to date\n- if you haven't already RSVP here: https://discord.com/channels/{SERVER_ID}/{channel_id}/{message_id}\nThanks :).")
 
                 else:
                     continue
