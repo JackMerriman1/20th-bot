@@ -39,16 +39,17 @@ timestamp_file = "last_post_time.json"
 #tree = app_commands.CommandTree(client)
 
 is_server = os.path.exists('20X_BOT/service_record_data.json')
+BOT_KEY = BOT_KEY_TEST
+SERVER_ID = SERVER_ID_TEST
 
 if is_server:
     BASE_PATH = '20X_BOT/'  # Path for the server
-    BOT_KEY = BOT_KEY_20X
-    SERVER_ID = SERVER_ID_20TH
-    
+    # BOT_KEY = BOT_KEY_20X
+    # SERVER_ID = SERVER_ID_20TH
 else:
     BASE_PATH = ''  # Path for local machine
-    BOT_KEY = BOT_KEY_TEST
-    SERVER_ID = SERVER_ID_TEST
+    # BOT_KEY = BOT_KEY_TEST
+    # SERVER_ID = SERVER_ID_TEST
 
 SERVICE_RECORD_FILE = os.path.join(BASE_PATH, 'service_record_data.json')
 SERVICE_RECORD = load_data(SERVICE_RECORD_FILE)
