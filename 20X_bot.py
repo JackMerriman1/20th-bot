@@ -7,7 +7,7 @@ import threading
 import time
 from secret import BOT_KEY_20X, SERVER_ID_20TH, BOT_KEY_TEST, SERVER_ID_TEST
 import os
-import praw
+# import praw
 
 CALENDAR_CHANNEL_ID = 843347366345441280 ###
 ATTENDING_REACTION = '✅'
@@ -1122,46 +1122,46 @@ async def check_banned(interaction: discord.Interaction, steam64id: str):
     except Exception as e:
         await interaction.response.send_message(f"ERROR: {e}\nplease screenshot this and sent it to boniface")
 
-@client.tree.command(name="reddit_post", description="generate a reddit recruitment post")
-@commands.cooldown(1, 5, commands.BucketType.default)
-async def reddit_post(interaction: discord.Interaction):
-    try:
-        subreddit_name = "FindAUnit"  # Replace with your target subreddit
-        title = "[A3][UK/EU][Recruiting] 20th Armoured Brigade Combat Team [MilSim]"
-        body = """We are the 20th Armoured Brigade Combat Team, A realistic British Armoured Infantry MilSim unit.
-        We fulfil many roles:
+# @client.tree.command(name="reddit_post", description="generate a reddit recruitment post")
+# @commands.cooldown(1, 5, commands.BucketType.default)
+# async def reddit_post(interaction: discord.Interaction):
+#     try:
+#         subreddit_name = "FindAUnit"  # Replace with your target subreddit
+#         title = "[A3][UK/EU][Recruiting] 20th Armoured Brigade Combat Team [MilSim]"
+#         body = """We are the 20th Armoured Brigade Combat Team, A realistic British Armoured Infantry MilSim unit.
+#         We fulfil many roles:
 
-        - Armoured Infantry (Main)
-        - Light Infantry
-        - Recce
-        - Armour
+#         - Armoured Infantry (Main)
+#         - Light Infantry
+#         - Recce
+#         - Armour
         
-        Event Timings: Saturdays 1900UK Time
-        Practice: Twice monthly on Wednesdays/Fridays
+#         Event Timings: Saturdays 1900UK Time
+#         Practice: Twice monthly on Wednesdays/Fridays
 
-        New members go through a structured weapons, vehicles and tactics familiarisation.
-        If you're interested then either comment, message me directly or join our discord below!
+#         New members go through a structured weapons, vehicles and tactics familiarisation.
+#         If you're interested then either comment, message me directly or join our discord below!
 
-        DISCORD: https://discord.gg/ywPjEaqFST"""
+#         DISCORD: https://discord.gg/ywPjEaqFST"""
 
-        # Check if posting is allowed
-        if can_post(timestamp_file):
-            try:
-                subreddit = reddit.subreddit(subreddit_name)
-                submission = subreddit.submit(title, selftext=body, flair_id="acf7f706-2050-11e6-9d2c-0e78d0cc7a07")
-                print(f"Post submitted: {submission.title} (ID: {submission.id})")
-                update_last_post_time(timestamp_file)
+#         # Check if posting is allowed
+#         if can_post(timestamp_file):
+#             try:
+#                 subreddit = reddit.subreddit(subreddit_name)
+#                 submission = subreddit.submit(title, selftext=body, flair_id="acf7f706-2050-11e6-9d2c-0e78d0cc7a07")
+#                 print(f"Post submitted: {submission.title} (ID: {submission.id})")
+#                 update_last_post_time(timestamp_file)
 
-            except Exception as e:
-                print(f"An error occurred: {e}")
-        else:
-            last_post_time = get_last_post_time(timestamp_file)
-            next_post_time = last_post_time + timedelta(hours=48)
-            print(f"Cannot post yet. You can post again after {next_post_time.strftime('%Y-%m-%d %H:%M:%S')}.")
+#             except Exception as e:
+#                 print(f"An error occurred: {e}")
+#         else:
+#             last_post_time = get_last_post_time(timestamp_file)
+#             next_post_time = last_post_time + timedelta(hours=48)
+#             print(f"Cannot post yet. You can post again after {next_post_time.strftime('%Y-%m-%d %H:%M:%S')}.")
         
 
-    except Exception as e:
-        await interaction.response.send_message(f"ERROR: {e}\nplease screenshot this and sent it to boniface")
+#     except Exception as e:
+#         await interaction.response.send_message(f"ERROR: {e}\nplease screenshot this and sent it to boniface")
 
 @client.tree.command(
     name="view_orbat",
