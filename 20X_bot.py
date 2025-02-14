@@ -5,8 +5,9 @@ from Functions import *
 import asyncio
 import threading
 import time
-from secret import BOT_KEY_20X, SERVER_ID_20TH, BOT_KEY_TEST, SERVER_ID_TEST
+from secret import BOT_KEY, SERVER_ID
 import os
+from typing import Literal
 # import praw
 
 CALENDAR_CHANNEL_ID = 843347366345441280 ###
@@ -39,8 +40,8 @@ timestamp_file = "last_post_time.json"
 #tree = app_commands.CommandTree(client)
 
 is_server = os.path.exists('20X_BOT/service_record_data.json')
-BOT_KEY = BOT_KEY_TEST
-SERVER_ID = SERVER_ID_TEST
+print(is_server)
+
 
 if is_server:
     BASE_PATH = '20X_BOT/'  # Path for the server
@@ -100,7 +101,13 @@ async def fetch_guild_and_members():
 
 @client.tree.command(name="create_event", description="Create an Event")
 @commands.cooldown(1, 5, commands.BucketType.default)
-async def create_event(interaction: discord.Interaction, event_name: str, event_description: str, event_date: str, step_off_time: str):
+async def create_event(
+    interaction: discord.Interaction, 
+    event_name: str, 
+    event_description: str, 
+    event_date: str, 
+    step_off_time: str, 
+    event_type: Literal["Operation", "Other"] = "Operation"):
     try:
         # Defer the interaction to allow time for processing
         await interaction.response.defer()
@@ -112,11 +119,18 @@ async def create_event(interaction: discord.Interaction, event_name: str, event_
             # Generate timestamps
             event_discord_timestamp, relative_timestamp, unix_timestamp = generate_unix_timestamp_and_relative(event_date, step_off_time)
 
-            embed = create_embed(
-                f"New Event Created: {event_name}",
-                f"{event_description}",
-                f"\nServer start: <t:{unix_timestamp}>\nBattle-Prep begins: <t:{unix_timestamp + 900}>\nStep Off: <t:{unix_timestamp + 1800}>\n\n\nEvent Begins {relative_timestamp}"
-            )
+            if event_type == "Operation":
+                embed = create_embed(
+                    f"New Event Created: {event_name}",
+                    f"{event_description}",
+                    f"\nServer start: <t:{unix_timestamp}>\nBattle-Prep begins: <t:{unix_timestamp + 900}>\nStep Off: <t:{unix_timestamp + 1800}>\n\n\nEvent Begins {relative_timestamp}"
+                )
+            else:
+                embed = create_embed(
+                    f"New Event Created: {event_name}",
+                    f"{event_description}",
+                    f"\nStart time: <t:{unix_timestamp + 1800}>\n\n\nEvent Begins {relative_timestamp}"
+                )
             
             await interaction.followup.send(embed=embed)
             event_message = await interaction.original_response()
