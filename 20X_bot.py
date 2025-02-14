@@ -123,13 +123,13 @@ async def create_event(
                 embed = create_embed(
                     f"New Event Created: {event_name}",
                     f"{event_description}",
-                    f"\nServer start: <t:{unix_timestamp}>\nBattle-Prep begins: <t:{unix_timestamp + 900}>\nStep Off: <t:{unix_timestamp + 1800}>\n\n\nEvent Begins {relative_timestamp}"
+                    f"\n**Server start:** <t:{unix_timestamp}>\n**Battle-Prep begins:** <t:{unix_timestamp + 900}>\n**Step Off:** <t:{unix_timestamp + 1800}>\n\n\nEvent Begins {relative_timestamp}"
                 )
             else:
                 embed = create_embed(
                     f"New Event Created: {event_name}",
                     f"{event_description}",
-                    f"\nStart time: <t:{unix_timestamp + 1800}>\n\n\nEvent Begins {relative_timestamp}"
+                    f"\n**Start time:** <t:{unix_timestamp + 1800}>\n\n\nEvent Begins {relative_timestamp}"
                 )
             
             await interaction.followup.send(embed=embed)
@@ -137,7 +137,7 @@ async def create_event(
 
             await event_message.add_reaction(ATTENDING_REACTION)
             await event_message.add_reaction(NOT_ATTENDING_REACTION)
-            await event_message.add_reaction(MAYBE_ATTENDING_REACTION)
+            # await event_message.add_reaction(MAYBE_ATTENDING_REACTION)
 
             channel_id = interaction.channel_id
             event_message_id = event_message.id
@@ -186,9 +186,9 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
             elif str(payload.emoji) == NOT_ATTENDING_REACTION:
                 await message.remove_reaction(ATTENDING_REACTION, member)
                 await message.remove_reaction(MAYBE_ATTENDING_REACTION, member)
-            elif str(payload.emoji) == MAYBE_ATTENDING_REACTION:
-                await message.remove_reaction(ATTENDING_REACTION, member)
-                await message.remove_reaction(NOT_ATTENDING_REACTION, member)
+            # elif str(payload.emoji) == MAYBE_ATTENDING_REACTION:
+            #     await message.remove_reaction(ATTENDING_REACTION, member)
+            #     await message.remove_reaction(NOT_ATTENDING_REACTION, member)
 
 
 # Generate RSVP list function
