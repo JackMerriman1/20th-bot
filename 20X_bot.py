@@ -123,13 +123,13 @@ async def create_event(
                 embed = create_embed(
                     f"New Event Created: {event_name}",
                     f"{event_description}",
-                    f"\n**Server start:** <t:{unix_timestamp}>\n**Battle-Prep begins:** <t:{unix_timestamp + 900}>\n**Step Off:** <t:{unix_timestamp + 1800}>\n\n\nEvent Begins {relative_timestamp}"
+                    f"\n**Server start:** <t:{unix_timestamp - 1800}>\n**Battle-Prep begins:** <t:{unix_timestamp - 900}>\n**Step Off:** <t:{unix_timestamp}>\n\n\nEvent Begins {relative_timestamp}"
                 )
             else:
                 embed = create_embed(
                     f"New Event Created: {event_name}",
                     f"{event_description}",
-                    f"\n**Start time:** <t:{unix_timestamp + 1800}>\n\n\nEvent Begins {relative_timestamp}"
+                    f"\n**Start time:** <t:{unix_timestamp}>\n\n\nEvent Begins {relative_timestamp}"
                 )
             
             await interaction.followup.send(embed=embed)
