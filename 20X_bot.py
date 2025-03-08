@@ -10,6 +10,8 @@ import os
 from typing import Literal
 # import praw
 
+
+
 CALENDAR_CHANNEL_ID = 843347366345441280 ###
 ATTENDING_REACTION = '✅'
 NOT_ATTENDING_REACTION = '❌'
@@ -1186,6 +1188,21 @@ async def view_orbat(interaction=discord.Interaction):
         await interaction.channel.send(file=discord.File(ORBAT_IMAGE_PATH))
     except Exception as e:
         print(e)
+
+########################################################## TESTING ###############################################################
+from discord.ui import Select
+from select_and_message_test import message_test, select_test
+
+@client.tree.command(name="message_test_command", description="message_test")
+@commands.cooldown(1, 5, commands.BucketType.default)
+async def message_test_command(interaction):
+    await message_test(interaction, client)
+
+
+@client.tree.command(name="select_test_command", description="select_test")
+@commands.cooldown(1, 5, commands.BucketType.default)
+async def select_test_command(interaction):
+    await select_test(interaction, client)
 
 
 client.run(BOT_KEY)
