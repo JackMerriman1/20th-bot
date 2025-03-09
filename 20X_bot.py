@@ -402,10 +402,10 @@ async def add_recruit(interaction: discord.Interaction, user: str, platoon: str,
         section_str = ""
         response_message = ""
         
-        allowed_role_list = ["RRT", "SAT"]
+        allowed_role_list = ["RRT", "SAT", "Junior NCO"]
         user_role_list = [role.name for role in interaction.user.roles]
         
-        allowed_channels = {"G1 Personnel Admin Channel": 701267972475584525, "Bot Test": 1246848431092138075}
+        allowed_channels = {"G1 Personnel Admin Channel": 701267972475584525, "Bot Test": 1246848431092138075, "Platoon General": 680803082644226172}
         if interaction.channel.id in allowed_channels.values():
 
             if any(role in allowed_role_list for role in user_role_list):
@@ -600,10 +600,6 @@ async def add_service_record(interaction:discord.Interaction, user: str, rank: s
                     else:
                         assignment_history = assignment_history.split("£")
                         SERVICE_RECORD[member_id]["assignment history"] = assignment_history
-
-                    
-
-
 
 
                     await interaction.response.send_message(f"Service record added for {user}")
