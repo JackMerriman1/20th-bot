@@ -452,7 +452,7 @@ async def add_recruit(interaction: discord.Interaction, user: str, platoon: str,
 @client.tree.command(name="phase_1_complete", 
                      description="Assigns user with correct roles, adds service record and send congrats message")
 @commands.cooldown(1, 5, commands.BucketType.default)
-async def phase_1_complete(interaction: discord.Interaction, user: str, platoon: str, service_number: str, zap_number: str, application_date: str, verified_forces: str= None):
+async def phase_1_complete(interaction: discord.Interaction, user: str, platoon: str, service_number: str, zap_number: str, roster_number: str, application_date: str, steam64_id: str, verified_forces: str= None):
 
     try:
         allowed_role_list = ["RTT", "SAT", "Officer"]
@@ -468,6 +468,8 @@ async def phase_1_complete(interaction: discord.Interaction, user: str, platoon:
             if member_id in SERVICE_RECORD:
                 await interaction.response.send_message(f"Service record for {user} already exists")
             else:
+
+
                 SERVICE_RECORD[member_id] = {}
                 SERVICE_RECORD[member_id]["name"] = user
                 SERVICE_RECORD[member_id]["rank"] = "Trainee Rifleman"
@@ -488,9 +490,45 @@ async def phase_1_complete(interaction: discord.Interaction, user: str, platoon:
                 platoon_str = f"{platoon} Platoon"
                 platoon_role = discord.utils.get(GUILD_ROLES, name=platoon_str)
                 rank_role = discord.utils.get(GUILD_ROLES, name="Phase 2 Trainee Rifleman")
+                
+                
+
+                ########################### SQL ################################
+
+                CONNECTION = pymysql.connect(
+                    host=DB_HOST,
+                    port=DB_PORT,
+                    user=DB_USER,
+                    password=DB_PASS,
+                    database=DB_NAME
+                    )
+                cursor = CONNECTION.cursor()
+                
+                verified_forces_sql = "FALSE"
+                if verified_forces != None:
+                    verified_forces_sql = "TRUE"
+
+                insert_query = """
+                INSERT INTO Members (DiscordName, Steam64, ZapNo, RosterNo, VerifiedForces)
+                VALUES (%s, %s, %s, %s, %s)
+                """
+                
+                cursor.execute(insert_query, (user, steam64_id, zap_number, roster_number, verified_forces_sql))
+                
+                CONNECTION.commit()
+                
+                cursor.close()
+                CONNECTION.close()
+
+
+
                 await member.add_roles(platoon_role, rank_role)
                 await interaction.response.send_message(f"Service record for {user} created! {platoon_str} and {rank_role} roles assigned!")
                 await welcome_channel.send(f"Congratulations to <@{member.id}> for completing the Phase 1 section of their CIC, Well done!")
+
+
+                ########################### SQL Complete ###############################
+
 
                 with open(SERVICE_RECORD_FILE, 'w') as f:
                     json.dump(SERVICE_RECORD, f)
