@@ -3,3 +3,4 @@ discord.py
 asyncio
 pytz
 datetime
+dotenv
