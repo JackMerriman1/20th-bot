@@ -5,4 +5,5 @@ pytz
 datetime
 sqlalchemy
 pyodbc
+pymysql
 dotenv

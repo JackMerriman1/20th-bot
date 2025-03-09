@@ -6,6 +6,8 @@ import asyncio
 import threading
 import time
 import os
+import pyodbc
+import pymysql
 from typing import Literal
 from dotenv import load_dotenv
 
@@ -24,6 +26,12 @@ WELCOME_CHANNEL_ID = int(os.getenv("WELCOME_CHANNEL_ID"))
 ATTENDING_REACTION = '✅'
 NOT_ATTENDING_REACTION = '❌'
 MAYBE_ATTENDING_REACTION = '❓'
+
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = int(os.getenv("DB_PORT"))
+DB_USER = os.getenv("DB_USER")
+DB_PASS = os.getenv("DB_PASS")
+DB_NAME = os.getenv("DB_NAME")
 
 intents = discord.Intents.default()
 intents.reactions = True
@@ -124,6 +132,35 @@ async def create_event(
         user_role_list = [role.name for role in interaction.user.roles]
 
         if any(role in allowed_role_list for role in user_role_list):
+
+            ################## SQL #####################
+            
+            CONNECTION = pymysql.connect(
+                host=DB_HOST,
+                port=DB_PORT,
+                user=DB_USER,
+                password=DB_PASS,
+                database=DB_NAME
+                )
+
+            # Create a cursor object to interact with the database
+            cursor = CONNECTION.cursor()
+
+            mySQLDateTime = f"{event_date[6:10]}-{event_date[3:5]}-{event_date[0:2]} {step_off_time}:00"
+
+            cursor.execute(f"""
+                           INSERT INTO Events (EventName, EventDescription, EventDatetime, EventType)
+                           VALUES
+                           ('{event_name}', '{event_description}', '{mySQLDateTime}', '{event_type}')
+                           """)
+            CONNECTION.commit()
+
+            cursor.close()
+            CONNECTION.close()
+
+            ################## SQL COMPLETE #####################
+
+
             # Generate timestamps
             event_discord_timestamp, relative_timestamp, unix_timestamp = generate_unix_timestamp_and_relative(event_date, step_off_time)
 
@@ -565,6 +602,7 @@ async def add_service_record(interaction:discord.Interaction, user: str, rank: s
                         SERVICE_RECORD[member_id]["assignment history"] = assignment_history
 
                     
+
 
 
 
