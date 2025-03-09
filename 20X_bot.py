@@ -146,13 +146,15 @@ async def create_event(
             # Create a cursor object to interact with the database
             cursor = CONNECTION.cursor()
 
+            
+            insert_query = """
+                INSERT INTO Events (EventName, EventDescription, EventDatetime, EventType)
+                VALUES (%s, %s, %s, %s)
+                """
+            
             mySQLDateTime = f"{event_date[6:10]}-{event_date[3:5]}-{event_date[0:2]} {step_off_time}:00"
+            cursor.execute(insert_query, (event_name, event_description, mySQLDateTime, event_type))
 
-            cursor.execute(f"""
-                           INSERT INTO Events (EventName, EventDescription, EventDatetime, EventType)
-                           VALUES
-                           ('{event_name}', '{event_description}', '{mySQLDateTime}', '{event_type}')
-                           """)
             CONNECTION.commit()
 
             cursor.close()
@@ -459,7 +461,6 @@ async def phase_1_complete(interaction: discord.Interaction, user: str, platoon:
         user_role_list = [role.name for role in interaction.user.roles]
         welcome_channel = GUILD.get_channel(RECRUIT_WELCOME_CHANNEL)
 
-
         member = discord.utils.get(GUILD_MEMBERS, name=user)
         member_id = member.id
 
@@ -468,31 +469,6 @@ async def phase_1_complete(interaction: discord.Interaction, user: str, platoon:
             if member_id in SERVICE_RECORD:
                 await interaction.response.send_message(f"Service record for {user} already exists")
             else:
-
-
-                SERVICE_RECORD[member_id] = {}
-                SERVICE_RECORD[member_id]["name"] = user
-                SERVICE_RECORD[member_id]["rank"] = "Trainee Rifleman"
-                SERVICE_RECORD[member_id]["service number"] = service_number
-                SERVICE_RECORD[member_id]["zap number"] = zap_number
-                SERVICE_RECORD[member_id]["application date"] = application_date
-                SERVICE_RECORD[member_id]["verified forces"] = verified_forces
-
-                SERVICE_RECORD[member_id]["qualifications"] = []
-                SERVICE_RECORD[member_id]["operations attended"] = []
-                SERVICE_RECORD[member_id]["staff roles"] = []
-                SERVICE_RECORD[member_id]["enlistment history"] = []
-                SERVICE_RECORD[member_id]["assignment history"] = []
-
-                roles = member.roles[1:]  # Exclude @everyone role
-                await member.remove_roles(*roles)
-
-                platoon_str = f"{platoon} Platoon"
-                platoon_role = discord.utils.get(GUILD_ROLES, name=platoon_str)
-                rank_role = discord.utils.get(GUILD_ROLES, name="Phase 2 Trainee Rifleman")
-                
-                
-
                 ########################### SQL ################################
 
                 CONNECTION = pymysql.connect(
@@ -520,6 +496,29 @@ async def phase_1_complete(interaction: discord.Interaction, user: str, platoon:
                 cursor.close()
                 CONNECTION.close()
 
+                ########################### SQL Complete ###############################
+
+
+                SERVICE_RECORD[member_id] = {}
+                SERVICE_RECORD[member_id]["name"] = user
+                SERVICE_RECORD[member_id]["rank"] = "Trainee Rifleman"
+                SERVICE_RECORD[member_id]["service number"] = service_number
+                SERVICE_RECORD[member_id]["zap number"] = zap_number
+                SERVICE_RECORD[member_id]["application date"] = application_date
+                SERVICE_RECORD[member_id]["verified forces"] = verified_forces
+
+                SERVICE_RECORD[member_id]["qualifications"] = []
+                SERVICE_RECORD[member_id]["operations attended"] = []
+                SERVICE_RECORD[member_id]["staff roles"] = []
+                SERVICE_RECORD[member_id]["enlistment history"] = []
+                SERVICE_RECORD[member_id]["assignment history"] = []
+
+                roles = member.roles[1:]  # Exclude @everyone role
+                await member.remove_roles(*roles)
+
+                platoon_str = f"{platoon} Platoon"
+                platoon_role = discord.utils.get(GUILD_ROLES, name=platoon_str)
+                rank_role = discord.utils.get(GUILD_ROLES, name="Phase 2 Trainee Rifleman")
 
 
                 await member.add_roles(platoon_role, rank_role)
@@ -527,7 +526,6 @@ async def phase_1_complete(interaction: discord.Interaction, user: str, platoon:
                 await welcome_channel.send(f"Congratulations to <@{member.id}> for completing the Phase 1 section of their CIC, Well done!")
 
 
-                ########################### SQL Complete ###############################
 
 
                 with open(SERVICE_RECORD_FILE, 'w') as f:
