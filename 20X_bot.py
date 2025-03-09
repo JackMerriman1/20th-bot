@@ -5,17 +5,25 @@ from Functions import *
 import asyncio
 import threading
 import time
-from secret import BOT_KEY, SERVER_ID
 import os
 from typing import Literal
-# import praw
+from dotenv import load_dotenv
 
-CALENDAR_CHANNEL_ID = 843347366345441280 ###
+# Load variables from .env
+load_dotenv()
+
+
+BOT_KEY = os.getenv("BOT_KEY")
+SERVER_ID = int(os.getenv("SERVER_ID"))
+
+
+CALENDAR_CHANNEL_ID = os.getenv("CALENDAR_CHANNEL_ID")
+RECRUIT_WELCOME_CHANNEL = os.getenv("RECRUIT_WELCOME_CHANNEL")
+WELCOME_CHANNEL_ID = int(os.getenv("WELCOME_CHANNEL_ID"))
+
 ATTENDING_REACTION = '✅'
 NOT_ATTENDING_REACTION = '❌'
 MAYBE_ATTENDING_REACTION = '❓'
-RECRUIT_WELCOME_CHANNEL = 680803082644226172
-WELCOME_CHANNEL_ID = 851874728394489926
 
 intents = discord.Intents.default()
 intents.reactions = True

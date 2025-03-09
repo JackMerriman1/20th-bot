@@ -3,3 +3,6 @@ discord.py
 asyncio
 pytz
 datetime
+sqlalchemy
+pyodbc
+dotenv
